@@ -12,10 +12,7 @@ After installtion it will ask to reboot the Laptop.
 
 Clone the Git Repository into a Folder
 
-C:\> git clone <git URL> vagrant
-
-Create a directory called ansible at the same level as vagrant.
-C:\> mkdir vagrant
+C:\> git clone <this_repo>
 
 
 Copy all the ansible modules or the modules that you want to test inside your VM. This ansible

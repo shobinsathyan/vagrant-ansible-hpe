@@ -1,0 +1,51 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+@required_plugins = [ 'vagrant-cachier', 'vagrant-vbguest', 'vagrant-vbox-snapshot', 'vagrant-puppet-install', 'vagrant-adam' ]
+
+require_relative "./vagrant_requires.rb"
+
+# Basebox URL's
+centos7_box  = 'http://cloud.centos.org/centos/7/vagrant/x86_64/images/CentOS-7-x86_64-Vagrant-1702_01.VirtualBox.box'
+
+# Define the hosts we want to build (options are pretty self explanitory but enumerated below)
+#   name         = vagrant name of host e.g. vagrant up capd-management-1
+#   ip           = the network address of the given node
+#   memory       = how much ram to assign the node
+#   cpu          = how many cpu's to assign to the node
+#   box          = what basebox to use to build the vm
+#
+#   Network descriptions below
+#   10.1.0.0/24 - Vagrant ADMIN
+#   10.1.1.0/24 - WEB
+#   10.1.2.0/24 - CORE
+#   10.1.4.0/24 - PSN
+#
+hosts = [
+  { name: 'hpe-ansible-1', ip: '10.1.0.30', memory:'256',  cpu: 1, box: 'CentOS7', environment: 'mojdev', nodetype: 'ansible1'},
+  { name: 'hpe-ansible-2', ip: '10.1.0.31', memory:'256',  cpu: 1, box: 'CentOS7', environment: 'mojdev', nodetype: 'ansible2'},
+]
+
+Vagrant.configure("2") do |config|
+  hosts.each do |host|
+    config.vm.define host[:name] do |c|
+      c.vm.box = host[:box]
+      c.vm.box_url = centos7_box
+      c.vm.hostname = host[:name]
+      c.vm.network :private_network, ip: host[:ip], netmask: '255.255.0.0'
+      c.vm.provider :virtualbox do |vb|
+        modifyvm_args = ['modifyvm', :id]
+        modifyvm_args << "--memory" << host[:memory]
+        modifyvm_args << "--cpus" << host[:cpu]
+        modifyvm_args << "--name" << host[:name]
+        modifyvm_args << "--ioapic" << "on"
+        modifyvm_args << "--natdnshostresolver1" << "on"
+        vb.customize(modifyvm_args)
+      end
+      c.vm.synced_folder "../ansible/", "/ansible"
+      c.vbguest.auto_update = true
+      c.cache.scope = :box
+      c.vm.provision :shell, path: "./scripts/ansible.sh"
+    end
+  end
+end
